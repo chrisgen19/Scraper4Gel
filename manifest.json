@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Machines4U Scraper",
+  "version": "1.0",
+  "description": "Scrapes product details from Machines4U listings.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "128": "images/icon128.png"
+    }
+  },
+  "icons": {
+    "128": "images/icon128.png"
+  }
+}
