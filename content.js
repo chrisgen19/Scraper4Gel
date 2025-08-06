@@ -14,23 +14,47 @@ async function scrapeDetailedPage(url) {
     const doc = new DOMParser().parseFromString(text, 'text/html');
 
     const productName = doc.querySelector('h1.list-title')?.textContent.trim() || 'N/A';
-    const price = doc.querySelector('span.price_normal b')?.textContent.trim() || 'N/A';
+    
+    // --- New & Improved Price Scraping Logic ---
+    let price = 'N/A';
+    const priceElement = doc.querySelector('span.price_normal b');
+    if (priceElement) {
+        let rawPriceText = priceElement.textContent.trim();
+
+        // Check if the price is a range (contains '-')
+        if (rawPriceText.includes('-')) {
+            // Split by the hyphen and take the second part (the higher value)
+            const priceParts = rawPriceText.split('-');
+            rawPriceText = priceParts[1] || ''; // Use the part after the hyphen
+        }
+
+        // Remove all non-numeric characters from the selected price string
+        const numericPrice = rawPriceText.replace(/[^0-9]/g, '');
+
+        if (numericPrice) { // If we have a number, use it
+            price = numericPrice;
+        } else {
+            // Otherwise, it might be "Ask for Price" or something similar, so keep the original full text
+            price = priceElement.textContent.trim();
+        }
+    }
+    // --- End of New Price Logic ---
+
     const sellerName = doc.querySelector('.business-name')?.textContent.trim() || 'N/A';
 
-    // --- New Location Scraping Logic ---
+    // --- Location Scraping Logic ---
     let location = 'N/A';
     const locationElement = doc.querySelector('a[onclick="showAdvertMap()"]');
     if (locationElement) {
         const fullLocationText = locationElement.textContent.trim();
         const locationParts = fullLocationText.split(',');
         if (locationParts.length > 1) {
-            // Get the last part (the state) and trim any whitespace
             location = locationParts[locationParts.length - 1].trim();
         } else {
-            location = fullLocationText; // Fallback if format is unexpected
+            location = fullLocationText;
         }
     }
-    // --- End of New Location Logic ---
+    // --- End of Location Logic ---
 
     const details = {
       'Condition': 'N/A',
@@ -52,7 +76,6 @@ async function scrapeDetailedPage(url) {
       }
     });
 
-    // --- Reordered return object with updated labels ---
     return {
       "Brand": details.Make,
       "Model": details.Model,
@@ -75,18 +98,16 @@ async function scrapeDetailedPage(url) {
  */
 async function main() {
   try {
-    // 1. Find the relevant section header. It could be "Listings" or "Search Results".
     let targetPanel = Array.from(document.querySelectorAll('.search-right-head-panel'))
-                           .find(panel => {
-                             const text = panel.textContent.trim();
-                             return text === 'Listings' || text.includes('Search Results');
-                           });
+                            .find(panel => {
+                              const text = panel.textContent.trim();
+                              return text === 'Listings' || text.includes('Search Results');
+                            });
 
     if (!targetPanel) {
       throw new Error("Could not find a 'Listings' or 'Search Results' section.");
     }
 
-    // 2. Precisely find all product tiles between this header and the next one.
     const allTiles = Array.from(document.querySelectorAll('.tiled_results_container'));
     const allPanels = Array.from(document.querySelectorAll('.search-right-head-panel'));
     const targetPanelIndex = allPanels.indexOf(targetPanel);
@@ -102,11 +123,9 @@ async function main() {
       throw new Error("No product tiles were found within the target section.");
     }
 
-    // 3. Extract the unique URLs from the correctly filtered tiles.
     const urls = targetTiles.map(tile => tile.querySelector('a.equip_link')?.href);
     const uniqueUrls = [...new Set(urls.filter(url => url))];
 
-    // 4. Scrape each unique URL and report progress.
     const allData = [];
     for (let i = 0; i < uniqueUrls.length; i++) {
       const data = await scrapeDetailedPage(uniqueUrls[i]);
@@ -117,7 +136,6 @@ async function main() {
       chrome.runtime.sendMessage({ status: 'progress', progress: progress });
     }
 
-    // 5. Send the final compiled data back to the popup.
     chrome.runtime.sendMessage({ status: 'complete', data: allData });
 
   } catch (error) {
