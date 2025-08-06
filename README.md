@@ -47,14 +47,16 @@ The CSV includes these cleaned fields:
 
 ## File Structure
 
+```
 machines4u-scraper/
-├── manifest.json # Core extension configuration
-├── popup.html # Popup interface
-├── popup.js # Popup logic & communication
-├── content.js # Main scraping script
+├── manifest.json          # Extension configuration and permissions
+├── popup.html             # User interface for the extension popup
+├── popup.js               # Handles popup interactions and data display
+├── content.js             # Main scraping logic and DOM manipulation
 ├── images/
-│ └── icon128.png # Extension icon
-└── README.md # Documentation
+│   └── icon128.png        # Extension icon (128x128px)
+└── README.md              # This documentation file
+```
 
 
 ## Technical Details
