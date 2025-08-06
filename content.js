@@ -15,8 +15,8 @@ async function scrapeDetailedPage(url) {
 
     const productName = doc.querySelector('h1.list-title')?.textContent.trim() || 'N/A';
     
-    // --- New & Improved Price Scraping Logic ---
-    let price = 'N/A';
+    // --- Final Price Scraping Logic ---
+    let price = ''; // Default to blank
     const priceElement = doc.querySelector('span.price_normal b');
     if (priceElement) {
         let rawPriceText = priceElement.textContent.trim();
@@ -31,14 +31,12 @@ async function scrapeDetailedPage(url) {
         // Remove all non-numeric characters from the selected price string
         const numericPrice = rawPriceText.replace(/[^0-9]/g, '');
 
-        if (numericPrice) { // If we have a number, use it
+        if (numericPrice) { // If we successfully extracted a number, use it
             price = numericPrice;
-        } else {
-            // Otherwise, it might be "Ask for Price" or something similar, so keep the original full text
-            price = priceElement.textContent.trim();
         }
+        // If numericPrice is empty (e.g., from "Ask for Price"), price will remain blank
     }
-    // --- End of New Price Logic ---
+    // --- End of Final Price Logic ---
 
     const sellerName = doc.querySelector('.business-name')?.textContent.trim() || 'N/A';
 
