@@ -1,6 +1,6 @@
 # Machines4U Scraper Chrome Extension
 
-![Extension Icon](https://i.imgur.com/O1hM5wY.png)
+![Extension Icon](images/icon128.png)
 
 A simple but powerful Chrome extension that scrapes equipment listing data from Machines4U search result pages and exports it to CSV.
 
