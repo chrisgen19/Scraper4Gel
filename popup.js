@@ -2,6 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const startBtn = document.getElementById('startScrapeBtn');
+  const cancelBtn = document.getElementById('cancelScrapeBtn');
   const statusDiv = document.getElementById('status');
   const downloadSection = document.getElementById('downloadSection');
   const downloadBtn = document.getElementById('downloadBtn');
@@ -9,16 +10,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const progressContainer = document.getElementById('progressContainer');
   const progressBar = document.getElementById('progressBar');
 
-  let scrapedData = []; // This will be populated by the background state
+  let scrapedData = [];
 
   // Function to update the UI based on the state received from the background
   function updateUI(state) {
+    if (!state) return;
+    
     scrapedData = state.data || [];
     
     switch(state.status) {
       case 'idle':
         statusDiv.textContent = 'Ready';
         startBtn.disabled = false;
+        startBtn.style.display = 'block';
+        cancelBtn.style.display = 'none';
         progressContainer.style.display = 'none';
         downloadSection.style.display = 'none';
         break;
@@ -27,6 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
         statusDiv.textContent = `Scraping... (${state.progress}%)`;
         progressBar.style.width = `${state.progress}%`;
         startBtn.disabled = true;
+        startBtn.style.display = 'none';
+        cancelBtn.style.display = 'block';
         progressContainer.style.display = 'block';
         downloadSection.style.display = 'none';
         break;
@@ -34,6 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'complete':
         statusDiv.textContent = `Scraping Complete! ${scrapedData.length} items found.`;
         startBtn.disabled = false;
+        startBtn.style.display = 'block';
+        cancelBtn.style.display = 'none';
         progressContainer.style.display = 'none';
         if (scrapedData.length > 0) {
           downloadSection.style.display = 'block';
@@ -43,6 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'error':
         statusDiv.textContent = `Error: ${state.error}`;
         startBtn.disabled = false;
+        startBtn.style.display = 'block';
+        cancelBtn.style.display = 'none';
         progressContainer.style.display = 'none';
         downloadSection.style.display = 'none';
         break;
@@ -51,7 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // When the popup opens, immediately ask the background script for the current state
   chrome.runtime.sendMessage({ action: 'getState' }, (response) => {
-    if (response) {
+    if (chrome.runtime.lastError) {
+        console.log("Error getting state:", chrome.runtime.lastError.message);
+    } else if (response) {
       updateUI(response);
     }
   });
@@ -66,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let name = 'machines4u-scrape';
       if (pathParts.length >= 2) {
         name = `${pathParts[pathParts.length - 2]}-${pathParts[pathParts.length - 1]}`;
-      } else if (pathParts.length === 1) {
+      } else if (pathParts.length === 1 && pathParts[0]) {
         name = pathParts[0];
       }
       return `${name}-${dateString}.csv`;
@@ -83,26 +96,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // When start button is clicked, just send a message to the background script
+  // When start button is clicked, send a message to the background script
   startBtn.addEventListener('click', () => {
     chrome.runtime.sendMessage({ action: 'startScraping' });
     // Optimistically update the UI so it feels responsive
-    updateUI({ status: 'scraping', progress: 0, data: [] });
+    statusDiv.textContent = 'Reloading page...';
+    startBtn.disabled = true;
   });
 
-  // The listener for runtime messages now just calls updateUI
+  // When cancel button is clicked, send a message to the background script
+  cancelBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ action: 'cancelScraping' });
+    // Optimistically update the UI
+    updateUI({ status: 'idle' });
+  });
+
+  // Listen for real-time updates pushed from the background script
   chrome.runtime.onMessage.addListener((message) => {
-    // We only need to react to state changes, which we get by asking getState.
-    // However, a continuous listener can be helpful for real-time updates
-    // if the background script were to push them. For now, asking on open is enough.
-    // To make it fully real-time, the background would need to message all popups.
-    // A simple polling mechanism is easier.
-    if (message.status) { // If a message has a status, it's from the content script
-        chrome.runtime.sendMessage({ action: 'getState' }, (response) => {
-            if (response) {
-                updateUI(response);
-            }
-        });
+    if (message.status === 'update' && message.newState) {
+        updateUI(message.newState);
     }
   });
 

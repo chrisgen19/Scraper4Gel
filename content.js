@@ -1,3 +1,18 @@
+// A flag to control the main scraping loop.
+let shouldContinueScraping = true;
+
+// Listen for the stop message from the background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'stopExecution') {
+        console.log('Cancel signal received. Stopping scrape.');
+        shouldContinueScraping = false;
+        sendResponse({ status: "stopping" });
+    }
+    // Return true to indicate you might send a response asynchronously
+    return true;
+});
+
+
 /**
  * Injects all the necessary HTML and CSS for the visual effects.
  */
@@ -114,7 +129,7 @@ async function main() {
         setupVisuals();
 
         let targetPanel = Array.from(document.querySelectorAll('.search-right-head-panel'))
-                                .find(panel => panel.textContent.trim() === 'Listings' || panel.textContent.trim().includes('Search Results'));
+                                 .find(panel => panel.textContent.trim() === 'Listings' || panel.textContent.trim().includes('Search Results'));
         if (!targetPanel) throw new Error("Could not find a 'Listings' or 'Search Results' section.");
 
         const allTiles = Array.from(document.querySelectorAll('.tiled_results_container'));
@@ -136,6 +151,12 @@ async function main() {
         const allData = [];
 
         for (let i = 0; i < uniqueTiles.length; i++) {
+            // ✅ Check the flag before processing the next item
+            if (!shouldContinueScraping) {
+                console.log('Scraping loop terminated.');
+                break; // Exit the loop
+            }
+
             const tile = uniqueTiles[i];
             const url = tile.querySelector('a.equip_link')?.href;
             if (!url) continue;
@@ -145,7 +166,6 @@ async function main() {
 
             const overlay = document.createElement('div');
             overlay.className = 'scraper-tile-overlay';
-            // --- THIS IS THE UPDATED LINE ---
             const gifUrl = chrome.runtime.getURL('images/scan.gif');
             overlay.innerHTML = `<img src="${gifUrl}" alt="Scanning..."><p>Scraping...</p>`;
             tile.appendChild(overlay);
@@ -164,11 +184,19 @@ async function main() {
             chrome.runtime.sendMessage({ status: 'progress', progress: progress });
         }
         
-        chrome.runtime.sendMessage({ status: 'complete', data: allData });
+        // Only send 'complete' if the loop finished naturally (wasn't cancelled)
+        if (shouldContinueScraping) {
+            chrome.runtime.sendMessage({ status: 'complete', data: allData });
+        }
 
     } catch (error) {
-        chrome.runtime.sendMessage({ status: 'error', error: error.message });
+      // Only send an error message if the process wasn't cancelled by the user
+      if (shouldContinueScraping) { 
+          chrome.runtime.sendMessage({ status: 'error', error: error.message });
+      }
     } finally {
+        // This cleanup runs regardless of how the try block exits (complete, error, or cancel)
+        console.log('Cleaning up visuals...');
         document.getElementById('scraper-visual-styles')?.remove();
         allTilesForCleanup.forEach(tile => {
             tile.classList.remove('scraper-item-container', 'scraper-item-processed');
@@ -180,4 +208,5 @@ async function main() {
     }
 }
 
+// Start the scraping process
 main();

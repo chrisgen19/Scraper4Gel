@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Machines4U Scraper",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Scrapes product details from Machines4U listings.",
   "permissions": [
     "activeTab",
     "scripting",
-    "downloads"
+    "downloads",
+    "tabs" 
   ],
   "background": {
     "service_worker": "background.js"

@@ -52,6 +52,15 @@
     #startScrapeBtn:hover:not(:disabled) {
       background-color: #2980b9;
     }
+    /* --- NEW CANCEL BUTTON --- */
+    #cancelScrapeBtn {
+      background-color: #e74c3c;
+      color: white;
+      display: none; /* Hidden by default */
+    }
+    #cancelScrapeBtn:hover:not(:disabled) {
+      background-color: #c0392b;
+    }
     #downloadBtn {
       background-color: #2ecc71;
       color: white;
@@ -109,6 +118,7 @@
     <p>Click the button to start scraping the current page.</p>
     
     <button id="startScrapeBtn">Start Scraping</button>
+    <button id="cancelScrapeBtn">Cancel Scraping</button>
     
     <div id="status">Ready</div>
 
